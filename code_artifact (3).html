@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>말랑말랑 아이스브레이킹 퀴즈!</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Gaegu, Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-gaegu {
+            font-family: 'Gaegu', cursive;
+        }
+        .bounce-gentle {
+            animation: bounceGentle 2s infinite ease-in-out;
+        }
+        .pop-in {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .pulse-glow {
+            animation: pulseGlow 1.5s infinite alternate;
+        }
+        @keyframes bounceGentle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(255, 182, 193, 0.5); }
+            100% { box-shadow: 0 0 25px rgba(255, 182, 193, 0.9); }
+        }
+        /* Custom card flips & 3D styling */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-amber-50 min-h-screen text-slate-800 flex flex-col justify-between overflow-x-hidden">
+
+    <!-- 상단 바 -->
+    <header class="w-full bg-white border-b-4 border-yellow-400 p-4 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <button id="btn-home" onclick="goHome()" class="flex items-center gap-2 text-2xl font-black text-amber-500 hover:text-amber-600 transition">
+                <span>🎈</span> <span class="font-gaegu text-3xl">말랑퀴즈</span>
+            </button>
+            <div class="flex items-center gap-4">
+                <button id="btn-sound" onclick="toggleSound()" class="bg-amber-100 p-2 rounded-full hover:bg-amber-200 text-xl transition" title="소리 켜기/끄기">
+                    🔊
+                </button>
+                <div class="bg-amber-100 px-4 py-1.5 rounded-full border-2 border-amber-300 flex items-center gap-2 font-bold text-amber-800">
+                    <span>⭐</span>
+                    <span id="score-display" class="text-xl">0</span>
+                    <span class="text-xs text-amber-600">점</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 컨테이너 -->
+    <main class="max-w-4xl w-full mx-auto p-4 flex-grow flex flex-col justify-center items-center my-4">
+
+        <!-- 1. 시작 화면 (모드 선택) -->
+        <section id="screen-start" class="w-full text-center space-y-6 pop-in">
+            <div class="space-y-2">
+                <span class="bg-yellow-200 text-yellow-800 px-4 py-1 rounded-full text-sm font-bold tracking-wide">처음 만난 친구들과 친해지는 시간!</span>
+                <h1 class="text-4xl sm:text-5xl font-black text-amber-600 font-gaegu tracking-wider">
+                    🎉 어색함 제로! 아이스브레이킹
+                </h1>
+                <p class="text-gray-600 font-medium">원하는 모드를 선택하고 재미있게 놀아볼까요?</p>
+            </div>
+
+            <!-- 모드 카드 목록 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto pt-4">
+                <!-- 밸런스 게임 -->
+                <button onclick="startQuiz('balance')" class="bg-gradient-to-br from-pink-400 to-rose-400 text-white p-6 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition text-left relative overflow-hidden group border-4 border-pink-200">
+                    <div class="text-4xl mb-2 group-hover:scale-110 transition duration-300">⚖️</div>
+                    <h3 class="text-2xl font-bold font-gaegu">밸런스 게임</h3>
+                    <p class="text-pink-100 text-sm mt-1">극단적인 선택! 친구들의 취향은?</p>
+                    <span class="absolute right-4 bottom-4 bg-white text-pink-500 font-bold px-3 py-1 rounded-full text-xs shadow">선택형</span>
+                </button>
+
+                <!-- 초성 퀴즈 -->
+                <button onclick="startQuiz('initial')" class="bg-gradient-to-br from-sky-400 to-blue-500 text-white p-6 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition text-left relative overflow-hidden group border-4 border-sky-200">
+                    <div class="text-4xl mb-2 group-hover:scale-110 transition duration-300">🔤</div>
+                    <h3 class="text-2xl font-bold font-gaegu">초성 퀴즈</h3>
+                    <p class="text-sky-100 text-sm mt-1">ㅊㅅ만 보고 정답을 맞혀봐!</p>
+                    <span class="absolute right-4 bottom-4 bg-white text-sky-600 font-bold px-3 py-1 rounded-full text-xs shadow">단어 맞히기</span>
+                </button>
+
+                <!-- 넌센스/재미있는 퀴즈 -->
+                <button onclick="startQuiz('nonsense')" class="bg-gradient-to-br from-purple-400 to-indigo-500 text-white p-6 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition text-left relative overflow-hidden group border-4 border-purple-200">
+                    <div class="text-4xl mb-2 group-hover:scale-110 transition duration-300">😆</div>
+                    <h3 class="text-2xl font-bold font-gaegu">넌센스 수수께끼</h3>
+                    <p class="text-purple-100 text-sm mt-1">빵빵 터지는 창의력 퀴즈!</p>
+                    <span class="absolute right-4 bottom-4 bg-white text-purple-600 font-bold px-3 py-1 rounded-full text-xs shadow">수수께끼</span>
+                </button>
+
+                <!-- 자기소개 카드 -->
+                <button onclick="startQuiz('talk')" class="bg-gradient-to-br from-emerald-400 to-teal-500 text-white p-6 rounded-3xl shadow-lg hover:shadow-2xl hover:-translate-y-1 transition text-left relative overflow-hidden group border-4 border-emerald-200">
+                    <div class="text-4xl mb-2 group-hover:scale-110 transition duration-300">💬</div>
+                    <h3 class="text-2xl font-bold font-gaegu">서로 알아가기 카드</h3>
+                    <p class="text-emerald-100 text-sm mt-1">랜덤 질문으로 친구를 알아가요!</p>
+                    <span class="absolute right-4 bottom-4 bg-white text-teal-600 font-bold px-3 py-1 rounded-full text-xs shadow">대화 나누기</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 2. 퀴즈 진행 화면 -->
+        <section id="screen-quiz" class="w-full hidden max-w-2xl">
+            <!-- 상단 상태바 (진행도 & 타이머) -->
+            <div class="bg-white rounded-2xl p-4 shadow-md border-2 border-amber-200 mb-6">
+                <div class="flex justify-between items-center mb-2 font-bold text-sm text-gray-600">
+                    <span id="quiz-category-badge" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs">모드 이름</span>
+                    <span id="progress-text">1 / 5</span>
+                </div>
+                <!-- 게이지 바 -->
+                <div class="w-full bg-gray-200 h-3 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="bg-gradient-to-r from-amber-400 to-orange-500 h-full w-0 transition-all duration-300"></div>
+                </div>
+                <!-- 타이머 (옵션) -->
+                <div id="timer-container" class="mt-3 flex items-center justify-between text-xs text-slate-500 border-t pt-2 border-slate-100">
+                    <span>⏱️ 남은 시간</span>
+                    <span id="timer-text" class="font-bold text-amber-600 text-base">15초</span>
+                </div>
+            </div>
+
+            <!-- 퀴즈 콘텐츠 컨테이너 -->
+            <div id="quiz-content" class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border-4 border-amber-300 min-h-[350px] flex flex-col justify-center items-center text-center relative">
+                <!-- 동적으로 질문 내용이 삽입됩니다 -->
+            </div>
+        </section>
+
+        <!-- 3. 결과 화면 -->
+        <section id="screen-result" class="w-full hidden text-center max-w-md pop-in">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border-4 border-yellow-300 space-y-6">
+                <div class="text-6xl bounce-gentle" id="result-emoji">🏆</div>
+                <div>
+                    <h2 class="text-3xl font-black font-gaegu text-amber-600" id="result-title">멋져요! 최고예요!</h2>
+                    <p class="text-gray-600 text-sm mt-1" id="result-subtitle">모든 문제를 다 풀었습니다!</p>
+                </div>
+
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <div class="text-sm text-amber-700 font-bold mb-1">획득한 총 별점</div>
+                    <div class="text-4xl font-black text-amber-500 flex justify-center items-center gap-1">
+                        <span>⭐</span> <span id="final-score">0</span>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <button onclick="goHome()" class="w-full py-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white font-bold rounded-2xl shadow-lg hover:brightness-105 active:scale-95 transition text-lg">
+                        다른 게임 하기 🎮
+                    </button>
+                    <button onclick="restartQuiz()" class="w-full py-3 bg-gray-100 text-gray-700 font-bold rounded-2xl hover:bg-gray-200 transition text-sm">
+                        다시 도전하기 🔄
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 정답/오답 팝업 모달 -->
+    <div id="feedback-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white p-6 rounded-3xl shadow-2xl border-4 max-w-sm w-full text-center space-y-4 pop-in" id="modal-card">
+            <div id="modal-icon" class="text-6xl">🎉</div>
+            <h3 id="modal-title" class="text-2xl font-black font-gaegu">정답입니다!</h3>
+            <p id="modal-msg" class="text-gray-600 text-sm">선생님과 친구들이 모두 깜짝 놀랐어요!</p>
+            <button onclick="nextQuestion()" class="w-full py-3 bg-amber-400 hover:bg-amber-500 text-white font-bold rounded-xl shadow-md transition">
+                다음으로 넘어가기 ➡️
+            </button>
+        </div>
+    </div>
+
+    <!-- 하단 푸터 -->
+    <footer class="text-center py-4 text-xs text-amber-700 font-medium">
+        🎈 초등학교 교실을 위한 말랑말랑 아이스브레이킹 웹앱
+    </footer>
+
+    <script>
+        // --- 1. Sound Effects (Web Audio API) ---
+        let soundEnabled = true;
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new AudioCtx();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'correct') {
+                // Bright happy chime
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                osc.frequency.setValueAtTime(1046.50, now + 0.3); // C6
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+                osc.start(now);
+                osc.stop(now + 0.6);
+            } else if (type === 'wrong') {
+                // Gentle low buzz
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.setValueAtTime(180, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'click') {
+                // Short pop
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'win') {
+                // Fanfare
+                const notes = [400, 500, 600, 800];
+                notes.forEach((freq, idx) => {
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.frequency.value = freq;
+                    g.gain.setValueAtTime(0.15, now + idx * 0.1);
+                    g.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.3);
+                    o.start(now + idx * 0.1);
+                    o.stop(now + idx * 0.1 + 0.3);
+                });
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('btn-sound').innerText = soundEnabled ? '🔊' : '🔇';
+        }
+
+        // --- 2. Quiz Data ---
+        const QUIZ_DATA = {
+            balance: [
+                {
+                    q: "평생 하나만 먹을 수 있다면?",
+                    a: "🍕 평생 피자만 먹기",
+                    b: "🍔 평생 치킨/버거만 먹기",
+                    desc: "친구들과 취향이 얼마나 비슷한지 이야기해 보세요!"
+                },
+                {
+                    q: "더 가고 싶은 초능력 학교는?",
+                    a: "🧙‍♂️ 투명인간이 되는 학교",
+                    b: "🦅 하늘을 마음대로 나는 학교",
+                    desc: "왜 그 초능력을 갖고 싶은지 친구에게 이유를 말해봐요!"
+                },
+                {
+                    q: "주말에 더 하고 싶은 일은?",
+                    a: "🎮 하루 종일 좋아하는 게임하기",
+                    b: "🎢 놀이공원 가서 놀이기구 타기",
+                    desc: "주말을 알차게 보내는 나만의 방법은?"
+                },
+                {
+                    q: "다시 태어난다면 어떤 동물?",
+                    a: "🐱 집에서 귀염받는 귀여운 고양이",
+                    b: "🦅 밀림과 하늘을 지배하는 독수리",
+                    desc: "동물이 되면 제일 먼저 뭘 하고 싶나요?"
+                },
+                {
+                    q: "방학 숙제는 언제 할까?",
+                    a: "⚡ 방학 시작하자마자 다 끝내기",
+                    b: "⏰ 개학 전날 밤에 몰아서 하기",
+                    desc: "실제 나는 어떤 유형인가요?"
+                }
+            ],
+            initial: [
+                {
+                    initials: "ㅂ B",
+                    hint: "달콤하고 시원해서 여름에 많이 먹어요! 🍧",
+                    answer: "빙수",
+                    choices: ["빙수", "비빔밥", "붕어빵", "바나나"]
+                },
+                {
+                    initials: "ㅎ ㄱ",
+                    hint: "공부하고 친구들과 함께 노는 이곳은?",
+                    answer: "학교",
+                    choices: ["학원", "학교", "한강", "장난감"]
+                },
+                {
+                    initials: "ㅋ ㅋ ㅇ",
+                    hint: "초콜릿을 만드는 재료이자 달콤 쌉싸름해요!",
+                    answer: "카카오",
+                    choices: ["카카오", "코코넛", "쿠키들", "키위새"]
+                },
+                {
+                    initials: "ㅌ 🎈",
+                    hint: "동글동글 튕기며 노는 운동기구!",
+                    answer: "탱탱볼",
+                    choices: ["탁구공", "탱탱볼", "털실놀이", "태권도"]
+                },
+                {
+                    initials: "ㅅ ㄴ ㄱ",
+                    hint: "추운 겨울에 눈을 뭉쳐서 만드는 사람 모양!",
+                    answer: "눈사람",
+                    choices: ["눈사람", "사냥꾼", "손난로", "설날길"]
+                }
+            ],
+            nonsense: [
+                {
+                    q: "세상에서 가장 가난한 왕은 누구일까요?",
+                    answer: "최저임금",
+                    desc: "임금(王)님이 최저라서 '최저임금'이에요! 👑"
+                },
+                {
+                    q: "바나나가 웃으면 무엇이 될까요?",
+                    answer: "바나나킥",
+                    desc: "피식(킥킥) 웃어서 '바나나킥'! 🍌"
+                },
+                {
+                    q: "아몬드가 죽으면 무엇이 될까요?",
+                    answer: "다이아몬드",
+                    desc: "영어로 Die(죽다) + 아몬드 = 다이아몬드! 💎"
+                },
+                {
+                    q: "왕이 헤어질 때 하는 인사는?",
+                    answer: "바이킹",
+                    desc: "Bye(바이) + King(왕) = 바이킹! 🚢"
+                },
+                {
+                    q: "소나무가 무너지면 무엇이 될까요?",
+                    answer: "피자",
+                    desc: "소나무가 '피'하고 '자' 빠져서 피자! 🍕"
+                }
+            ],
+            talk: [
+                {
+                    q: "✨ 나의 '최애' 음식 하나를 소개하고, 이유를 말해봐요!",
+                    tag: "음식"
+                },
+                {
+                    q: "🎨 요즘 내가 제일 관심 있는 취미나 좋아하는 것은 무엇인가요?",
+                    tag: "취미"
+                },
+                {
+                    q: "🦸‍♂️ 내가 만약 하루 동안 영웅이 된다면 무슨 능력을 갖고 싶나요?",
+                    tag: "상상"
+                },
+                {
+                    q: "✈️ 꼭 한번 놀러 가보고 싶은 장소나 나라가 있나요?",
+                    tag: "여행"
+                },
+                {
+                    q: "⭐ 짝꿍이나 옆 친구의 '멋진 점' 한 가지를 칭찬해 주세요!",
+                    tag: "칭찬"
+                }
+            ]
+        };
+
+        // --- 3. App State ---
+        let currentCategory = '';
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let totalScore = 0;
+        let timerInterval = null;
+        let timeLeft = 15;
+
+        // --- 4. Navigation & Flow Control ---
+        function startQuiz(category) {
+            playSound('click');
+            currentCategory = category;
+            currentIndex = 0;
+            
+            // 질문 셔플 복사
+            currentQuestions = [...QUIZ_DATA[category]].sort(() => Math.random() - 0.5);
+
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+
+            const categoryNames = {
+                balance: '⚖️ 밸런스 게임',
+                initial: '🔤 초성 퀴즈',
+                nonsense: '😆 넌센스 수수께끼',
+                talk: '💬 서로 알아가기'
+            };
+            document.getElementById('quiz-category-badge').innerText = categoryNames[category];
+
+            renderQuestion();
+        }
+
+        function goHome() {
+            playSound('click');
+            clearInterval(timerInterval);
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            document.getElementById('screen-start').classList.remove('hidden');
+            closeModal();
+        }
+
+        function restartQuiz() {
+            startQuiz(currentCategory);
+        }
+
+        // --- 5. Question Render Engines ---
+        function renderQuestion() {
+            clearInterval(timerInterval);
+            const qData = currentQuestions[currentIndex];
+            const contentBox = document.getElementById('quiz-content');
+            contentBox.innerHTML = '';
+
+            // 게이지 바 업데이트
+            const progress = ((currentIndex + 1) / currentQuestions.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${currentQuestions.length}`;
+
+            // 모드별 화면 렌더링
+            if (currentCategory === 'balance') {
+                renderBalanceView(qData, contentBox);
+            } else if (currentCategory === 'initial') {
+                renderInitialView(qData, contentBox);
+            } else if (currentCategory === 'nonsense') {
+                renderNonsenseView(qData, contentBox);
+            } else if (currentCategory === 'talk') {
+                renderTalkView(qData, contentBox);
+            }
+
+            // 타이머 설정 (밸런스/초성 퀴즈 등에 적용)
+            if (currentCategory === 'initial' || currentCategory === 'nonsense') {
+                startTimer(15);
+            } else {
+                document.getElementById('timer-container').classList.add('hidden');
+            }
+        }
+
+        // 타이머 제어
+        function startTimer(seconds) {
+            const timerContainer = document.getElementById('timer-container');
+            const timerText = document.getElementById('timer-text');
+            timerContainer.classList.remove('hidden');
+            timeLeft = seconds;
+            timerText.innerText = `${timeLeft}초`;
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerText.innerText = `${timeLeft}초`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    handleTimeOut();
+                }
+            }, 1000);
+        }
+
+        function handleTimeOut() {
+            playSound('wrong');
+            showModal('⏰ 시간 초과!', '시간이 다 되었어요! 다음 문제에 도전해 보세요.', false);
+        }
+
+        // A. 밸런스 게임 뷰
+        function renderBalanceView(qData, container) {
+            container.innerHTML = `
+                <span class="text-sm bg-pink-100 text-pink-700 px-3 py-1 rounded-full font-bold mb-4">어느 쪽을 선택할까?</span>
+                <h3 class="text-2xl sm:text-3xl font-black mb-6 text-slate-800">${qData.q}</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                    <button onclick="selectBalance('A', '${qData.desc}')" class="p-5 bg-gradient-to-r from-pink-50 to-rose-100 hover:from-pink-100 hover:to-rose-200 border-2 border-pink-300 rounded-2xl text-lg font-bold text-pink-900 shadow-md transform hover:-translate-y-1 transition text-center flex items-center justify-center min-h-[100px]">
+                        ${qData.a}
+                    </button>
+                    <button onclick="selectBalance('B', '${qData.desc}')" class="p-5 bg-gradient-to-r from-purple-50 to-indigo-100 hover:from-purple-100 hover:to-indigo-200 border-2 border-purple-300 rounded-2xl text-lg font-bold text-purple-900 shadow-md transform hover:-translate-y-1 transition text-center flex items-center justify-center min-h-[100px]">
+                        ${qData.b}
+                    </button>
+                </div>
+            `;
+        }
+
+        function selectBalance(choice, desc) {
+            addScore(10);
+            playSound('correct');
+            showModal('좋은 선택이에요! 👏', desc, true);
+        }
+
+        // B. 초성 퀴즈 뷰
+        function renderInitialView(qData, container) {
+            const choicesHtml = qData.choices.map(c => `
+                <button onclick="checkInitialAnswer('${c}', '${qData.answer}')" class="py-3 px-4 bg-sky-50 hover:bg-sky-100 border-2 border-sky-200 text-sky-900 font-bold rounded-xl shadow-sm hover:scale-105 transition">
+                    ${c}
+                </button>
+            `).join('');
+
+            container.innerHTML = `
+                <span class="text-sm bg-sky-100 text-sky-700 px-3 py-1 rounded-full font-bold mb-2">초성을 보고 맞혀보세요</span>
+                <div class="text-5xl font-black text-sky-600 my-4 tracking-widest font-gaegu bg-sky-50 px-8 py-4 rounded-2xl border-2 border-dashed border-sky-300">
+                    ${qData.initials}
+                </div>
+                <p class="text-gray-500 mb-6 text-sm">💡 힌트: ${qData.hint}</p>
+                <div class="grid grid-cols-2 gap-3 w-full max-w-md">
+                    ${choicesHtml}
+                </div>
+            `;
+        }
+
+        function checkInitialAnswer(userChoice, answer) {
+            clearInterval(timerInterval);
+            if (userChoice === answer) {
+                addScore(20);
+                playSound('correct');
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+                showModal('정답입니다! 🎉', `정답은 바로 [${answer}] 입니다!`, true);
+            } else {
+                playSound('wrong');
+                showModal('아쉬워요! 😅', `정답은 [${answer}] 이었습니다.`, false);
+            }
+        }
+
+        // C. 넌센스 수수께끼 (카드 뒤집기 형태)
+        function renderNonsenseView(qData, container) {
+            container.innerHTML = `
+                <span class="text-sm bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-bold mb-4">카드 뒤집기 수수께끼</span>
+                <h3 class="text-2xl font-black text-gray-800 mb-6">${qData.q}</h3>
+                
+                <div id="flip-card" class="w-full max-w-sm h-40 perspective-1000 cursor-pointer" onclick="revealNonsenseAnswer('${qData.answer}', '${qData.desc}')">
+                    <div id="flip-card-inner" class="relative w-full h-full transform-style-3d shadow-xl rounded-2xl border-4 border-purple-300 bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center p-4">
+                        <div class="text-xl font-bold flex flex-col items-center gap-2">
+                            <span>❓ 꾹 눌러서 정답 확인하기</span>
+                            <span class="text-xs bg-white/20 px-3 py-1 rounded-full font-normal">터치하면 카드가 뒤집혀요</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function revealNonsenseAnswer(answer, desc) {
+            clearInterval(timerInterval);
+            const cardInner = document.getElementById('flip-card-inner');
+            cardInner.style.transform = 'rotateY(180deg)';
+            
+            setTimeout(() => {
+                cardInner.className = "relative w-full h-full rounded-2xl border-4 border-amber-300 bg-amber-100 text-amber-900 flex flex-col items-center justify-center p-4 text-center";
+                cardInner.style.transform = 'none';
+                cardInner.innerHTML = `
+                    <div class="text-2xl font-black text-purple-700 mb-1">정답: ${answer}</div>
+                    <div class="text-sm font-medium text-gray-600">${desc}</div>
+                `;
+                addScore(15);
+                playSound('correct');
+                confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
+                
+                // 2초 후 팝업으로 넘어가기
+                setTimeout(() => {
+                    showModal('깔깔깔! 재미있죠? 😄', desc, true);
+                }, 1500);
+            }, 300);
+        }
+
+        // D. 서로 알아가기 질문 카드
+        function renderTalkView(qData, container) {
+            container.innerHTML = `
+                <span class="text-sm bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full font-bold mb-2"># ${qData.tag}</span>
+                <div class="p-8 bg-gradient-to-br from-emerald-50 to-teal-50 border-4 border-emerald-300 rounded-3xl w-full shadow-inner my-4">
+                    <p class="text-2xl sm:text-3xl font-black text-emerald-900 leading-relaxed font-gaegu">${qData.q}</p>
+                </div>
+                <p class="text-xs text-gray-500 mb-6">옆에 있는 친구나 모둠원들과 의견을 공유해보세요!</p>
+                <button onclick="finishTalkQuestion()" class="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl shadow-lg transition hover:scale-105">
+                    이야기 나눴어요! 🗣️
+                </button>
+            `;
+        }
+
+        function finishTalkQuestion() {
+            addScore(10);
+            playSound('correct');
+            showModal('멋진 대화였어요! 👏', '서로에 대해 조금 더 알게 되었네요!', true);
+        }
+
+        // --- 6. Helper & Modal System ---
+        function addScore(pts) {
+            totalScore += pts;
+            document.getElementById('score-display').innerText = totalScore;
+        }
+
+        function showModal(title, msg, isSuccess) {
+            const modal = document.getElementById('feedback-modal');
+            const modalCard = document.getElementById('modal-card');
+            const modalIcon = document.getElementById('modal-icon');
+            
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
+
+            if (isSuccess) {
+                modalCard.className = "bg-white p-6 rounded-3xl shadow-2xl border-4 border-emerald-400 max-w-sm w-full text-center space-y-4 pop-in";
+                modalIcon.innerText = "🎉";
+            } else {
+                modalCard.className = "bg-white p-6 rounded-3xl shadow-2xl border-4 border-rose-400 max-w-sm w-full text-center space-y-4 pop-in";
+                modalIcon.innerText = "💡";
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('feedback-modal').classList.add('hidden');
+        }
+
+        function nextQuestion() {
+            closeModal();
+            currentIndex++;
+            if (currentIndex < currentQuestions.length) {
+                renderQuestion();
+            } else {
+                finishQuiz();
+            }
+        }
+
+        function finishQuiz() {
+            clearInterval(timerInterval);
+            playSound('win');
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-result').classList.remove('hidden');
+
+            document.getElementById('final-score').innerText = totalScore;
+
+            if (totalScore >= 50) {
+                document.getElementById('result-title').innerText = "최고의 아이스브레이커! 🏆";
+                document.getElementById('result-subtitle').innerText = "친화력 대장! 친구들과 완벽하게 친해졌어요!";
+                document.getElementById('result-emoji').innerText = "🥇";
+            } else {
+                document.getElementById('result-title').innerText = "참 잘했어요! ✨";
+                document.getElementById('result-subtitle').innerText = "즐겁게 참여한 당신, 멋쟁이!";
+                document.getElementById('result-emoji').innerText = "🌟";
+            }
+        }
+    </script>
+</body>
+</html>
